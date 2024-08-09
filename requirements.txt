@@ -1,0 +1,12 @@
+colour==0.1.5
+dlib==19.24.4
+gradio==4.38.1
+matplotlib==3.9.1
+numpy==2.0.0
+opencv_contrib_python==4.10.0.84
+opencv_python==4.10.0.84
+opencv_python_headless==4.10.0.84
+pandas==2.2.2
+Pillow==10.4.0
+torch==2.3.1
+torchvision==0.18.1

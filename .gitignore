@@ -1,0 +1,9 @@
+*.pyc
+*.mp4
+*.avi
+libtorch/
+pytorch/
+opencv/
+argparse/
+torchvision/
+vision-main/
