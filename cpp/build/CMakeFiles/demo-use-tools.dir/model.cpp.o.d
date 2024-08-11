@@ -340,6 +340,7 @@ CMakeFiles/demo-use-tools.dir/model.cpp.o: \
  /root/better-camera/pytorch/torch/include/c10/core/SymIntArrayRef.h \
  /root/better-camera/pytorch/torch/include/c10/util/DimVector.h \
  /root/better-camera/pytorch/torch/include/c10/core/impl/SizesAndStrides.h \
+ /root/better-camera/pytorch/torch/include/c10/util/python_stub.h \
  /root/better-camera/pytorch/torch/include/c10/util/ExclusivelyOwned.h \
  /root/better-camera/pytorch/torch/include/c10/core/TensorImpl.h \
  /root/better-camera/pytorch/torch/include/c10/core/InferenceMode.h \
@@ -3439,7 +3440,6 @@ CMakeFiles/demo-use-tools.dir/model.cpp.o: \
  /root/better-camera/pytorch/torch/include/ATen/ops/_sample_dirichlet_native.h \
  /root/better-camera/pytorch/torch/include/ATen/ops/_saturate_weight_to_fp16_native.h \
  /root/better-camera/pytorch/torch/include/ATen/ops/_scaled_dot_product_attention_math_native.h \
- /root/better-camera/pytorch/torch/include/ATen/ops/_scaled_dot_product_attention_math_for_mps_native.h \
  /root/better-camera/pytorch/torch/include/ATen/ops/_scaled_dot_product_cudnn_attention_native.h \
  /root/better-camera/pytorch/torch/include/ATen/ops/_scaled_dot_product_cudnn_attention_backward_native.h \
  /root/better-camera/pytorch/torch/include/ATen/ops/_scaled_dot_product_efficient_attention_native.h \
