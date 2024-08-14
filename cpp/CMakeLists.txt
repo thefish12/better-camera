@@ -39,11 +39,11 @@ include_directories(/usr/local/include/)
 add_executable(demo-use-tools ${SOURCES})
 
 # 链接必要的库
+find_package(Torch REQUIRED PATHS /root/pytorch/torch/share/cmake/Torch/)
 find_package(OpenCV REQUIRED)
 # find_package(OpenCV REQUIRED PATHS /root/better-camera/cpp/opencv/build NO_DEFAULT_PATH)
-find_package(Torch REQUIRED PATHS /root/better-camera/pytorch/torch/share/cmake/Torch NO_DEFAULT_PATH)
+# find_package(Torch REQUIRED PATHS /root/better-camera/pytorch/torch/share/cmake/Torch NO_DEFAULT_PATH)
 include_directories(${OpenCV_INCLUDE_DIRS})
-find_package(Torch REQUIRED)
 
 message(STATUS "OpenCV libraries: ${OpenCV_LIBS}")
 message(STATUS "${OpenCV_INCLUDE_DIRS}")

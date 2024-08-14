@@ -216,7 +216,7 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
         frame_cnt++;
         std::cerr<<"Getting face locations..."<<std::endl;
         auto bbox = get_face_loc(frame);
-        std::cerr<<"Face locations got."<<std::endl<<"Start running face loop..."<<std::endl;
+        std::cerr<<"Face locations got. Size:"<<bbox.size()<<std::endl<<"Start running face loop..."<<std::endl;
         if (!bbox.empty()) {
             for (const auto &b : bbox) {
                 cv::Rect face_rect = b;
