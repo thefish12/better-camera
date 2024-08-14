@@ -1,3 +1,0 @@
-/root/better-camera/cpp/build/CMakeFiles/demo-use-tools.dir
-/root/better-camera/cpp/build/CMakeFiles/edit_cache.dir
-/root/better-camera/cpp/build/CMakeFiles/rebuild_cache.dir

@@ -174,19 +174,18 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
 
     // load model weights
     std::cerr<<"Start loading model..."<<std::endl;
-    // #ifdef USE_CUDA
-    // auto model = model_static(true,true,model_weight);
-    // #else
-    // auto model = model_static(true,false,model_weight);
-    // #endif
-    torch::jit::script::Module model;
-    try {
-    // Deserialize the ScriptModule from a file using torch::jit::load().
-        model = torch::jit::load("./data/traced_resnet_model.pt");
-    }
-    catch (const c10::Error& e) {
-        std::cerr << "error loading the model\n";
-    }
+    ResNet model({3, 4, 6, 3}); // 使用您的层配置创建模型实例
+    torch::load(model, model_weight); // 从保存的文件导入参数
+    // torch::jit::script::Module model;
+    // try {
+    // // Deserialize the ScriptModule from a file using torch::jit::load().
+    //     model = torch::jit::load("./data/traced_resnet_model.pt");
+    // }
+    // catch (const c10::Error& e) {
+    //     std::cerr << "error loading the model\n";
+    // }
+
+
     std::cerr<<"Model weights defined."<<std::endl;
     std::cerr<<"Model loaded."<<std::endl;
     #ifdef USE_CUDA

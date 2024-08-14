@@ -156,7 +156,9 @@ def run(video_path, model_weight, jitter, vis, display_off, save_text, USE_CUDA=
                     if jitter > 0:
                         output = torch.mean(output, 0)
                     score = F.sigmoid(output).item()
-
+                    traced_script_module = torch.jit.trace(model, img)
+                    traced_script_module.save("traced_resnet_model.pt")
+                    return 0
                     coloridx = min(int(round(score*10)),9)
                     draw = ImageDraw.Draw(frame)
                     drawrect(draw, [(b[0], b[1]), (b[2], b[3])], outline=colors[coloridx].hex, width=5)
