@@ -6,5 +6,5 @@ CXX_DEFINES = -DUSE_C10D_GLOO -DUSE_DISTRIBUTED -DUSE_RPC -DUSE_TENSORPIPE
 
 CXX_INCLUDES = -I/root/better-camera/cpp -isystem /usr/local/include/opencv4 -isystem /root/pytorch/torch/include -isystem /root/pytorch/torch/include/torch/csrc/api/include
 
-CXX_FLAGS = -D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++17
+CXX_FLAGS =    -O3 -march=native -D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++17
 
