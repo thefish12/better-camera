@@ -52,7 +52,7 @@ std::vector<cv::Rect> get_face_loc(cv::Mat& image) {
         faces_rects.push_back(face);
     }
 
-    bool vis = true;
+    bool vis = false;
     if (vis) {
         std::cout << "\n\ntools: " << faces_rects.size() << std::endl;
         // Note: landmarks and scores are not handled in this example

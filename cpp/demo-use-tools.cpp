@@ -35,7 +35,7 @@
 //     .default_value(std::string(""));
 // program.add_argument("--model_weight")
 //     .help("path to model weights file")
-//     .default_value(std::string("data/model_weights.pkl"));
+//     .default_value(std::string("data/model_weights.pth"));
 // program.add_argument("--jitter")
 //     .help("jitter bbox n times, and average results")
 //     .default_value(0)
@@ -98,7 +98,7 @@ torch::Tensor preprocess_image(const cv::Mat& image) {
 }
 
 
-const std::string CNN_FACE_MODEL = "data/mmod_human_face_detector.dat"; // from http://dlib.net/files/mmod_human_face_detector.dat.bz2
+// const std::string CNN_FACE_MODEL = "data/mmod_human_face_detector.dat"; // from http://dlib.net/files/mmod_human_face_detector.dat.bz2
 
 #ifdef JITTER
 std::tuple<float, float, float, float> bbox_jitter(float bbox_left, float bbox_top, float bbox_right, float bbox_bottom) {
@@ -124,11 +124,14 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
     for (int i = 0; i < 10; ++i) {
         colors[i] = cv::Scalar(0, 255 * i / 10, 255 * (10 - i) / 10);
     }
+    std::cerr<<"Start loading font file..."<<std::endl;
     cv::Ptr<cv::freetype::FreeType2> ft2;
     ft2 = cv::freetype::createFreeType2();
     ft2->loadFontData("data/arial.ttf", 0);
+    std::cerr<<"Font file loaded."<<std::endl;
 
     // set up video source
+    std::cerr<<"Start loading video..."<<std::endl;
     cv::VideoCapture cap;
     std::string video_output_path = video_path;
     if (video_path.empty()) {
@@ -137,8 +140,10 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
     } else {
         cap.open(video_path);
     }
+    std::cerr<<"Video loaded."<<std::endl;
 
     // set up output file
+    std::cerr<<"Start loading output file..."<<std::endl;
     std::ofstream f;
     if (save_text) {
         std::string outtext_name = std::filesystem::path(video_output_path).stem().string() + "_output.txt";
@@ -157,6 +162,7 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
         std::cerr << "Error opening video stream or file" << std::endl;
         return;
     }
+    std::cerr<<"Output file loaded."<<std::endl;
 
     // set up data transformation
     // auto test_transforms = torch::data::transforms::Compose({
@@ -167,16 +173,25 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
     // });
 
     // load model weights
+    std::cerr<<"Start loading model..."<<std::endl;
+    ResNet model({3, 4, 6, 3}); // 使用您的层配置创建模型实例
+    torch::load(model, model_weight); // 从保存的文件导入参数
+    // torch::jit::script::Module model;
+    // try {
+    // // Deserialize the ScriptModule from a file using torch::jit::load().
+    //     model = torch::jit::load("./data/traced_resnet_model.pt");
+    // }
+    // catch (const c10::Error& e) {
+    //     std::cerr << "error loading the model\n";
+    // }
+
+
+    std::cerr<<"Model weights defined."<<std::endl;
+    std::cerr<<"Model loaded."<<std::endl;
     #ifdef USE_CUDA
-    auto model = model_static(true,true,model_weight);
-    #else
-    auto model = model_static(true,false,model_weight);
+        model.to(torch::kCUDA);
     #endif
-    torch::load(model, model_weight);
-    #ifdef USE_CUDA
-        model->to(torch::kCUDA);
-    #endif
-    model->eval();
+    model.eval();
 
     #ifdef USE_IPEX
         #ifdef USE_BF16
@@ -185,7 +200,9 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
             model = ipex::optimize(model);
         #endif
     #endif
+    std::cerr<<"Model set complete."<<std::endl;
 
+    std::cerr<<"Start running reading loop..."<<std::endl;
     // video reading loop
     int frame_cnt = 0;
     while (cap.isOpened()) {
@@ -197,7 +214,9 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
         }
 
         frame_cnt++;
+        std::cerr<<"Getting face locations..."<<std::endl;
         auto bbox = get_face_loc(frame);
+        std::cerr<<"Face locations got."<<std::endl<<"Start running face loop..."<<std::endl;
         if (!bbox.empty()) {
             for (const auto &b : bbox) {
                 cv::Rect face_rect = b;
@@ -217,14 +236,15 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
                 }
                 #endif
                 // forward pass
+                std::cerr<<"Start running forward pass..."<<std::endl;
                 #ifdef USE_BF16
                     img = img.to(torch::kBFloat16);
                 #endif
                 torch::Tensor output;
                 #ifdef USE_CUDA
-                    output = model->forward(img.to(torch::kCUDA));
+                    output = model.forward(img.to(torch::kCUDA));
                 #else
-                    output = model->forward(img);
+                    output = model.forward({img}).toTensor();
                 #endif
                 #ifdef JITTER
                 if (jitter > 0) {
@@ -232,16 +252,18 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
                 }
                 #endif
                 float score = torch::sigmoid(output).item<float>();
+                std::cerr<<"Forward pass done. Scode got."<<std::endl<<"Start drawing rect..."<<std::endl;
 
                 int coloridx = std::min(static_cast<int>(std::round(score * 10)), 9);
                 drawrect(frame, face_rect, colors[coloridx], 5);
                 ft2->putText(frame, std::to_string(score), cv::Point(b.height, b.x), 40, cv::Scalar(255, 255, 255, 128), -1, cv::LINE_AA, true);
+                std::cerr<<"Rect drawn."<<std::endl;
                 if (save_text) {
                     f << frame_cnt << "," << score << "\n";
                 }
             }
         }
-
+        std::cerr<<"Face loop done."<<std::endl;
         if (!display_off) {
             cv::imshow("Result", frame);
             if (cv::waitKey(20) == 32) { // wait for space key to exit
@@ -278,6 +300,6 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
 int main(int argc, char **argv) {
     // program.parse_args(argc, argv);
     // run(args.get<std::string>("video"), args.get<std::string>("model_weight"), args.get<int>("jitter"), args.get<bool>("save_vis"), args.get<bool>("display_off"), args.get<bool>("save_text"), args.get<bool>("cuda"), args.get<bool>("ipex"), args.get<bool>("bf16"));
-    run("./videoplayback.avi","",0,false,true,false);
+    run("./videoplayback.avi","./data/model_weights.pth",0,false,true,false);
     return 0;
 }
