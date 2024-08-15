@@ -244,7 +244,7 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
                 #ifdef USE_CUDA
                     output = model.forward(img.to(torch::kCUDA));
                 #else
-                    output = model.forward({img}).toTensor();
+                    output = model.forward({img});
                 #endif
                 #ifdef JITTER
                 if (jitter > 0) {

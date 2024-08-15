@@ -2,33 +2,41 @@
 #include <iostream>
 #include <cmath>
 
-struct Bottleneck : torch::nn::Module {
+class Bottleneck : public torch::nn::Module {
+public:
     static const int expansion = 4;
-    torch::nn::Conv2d conv1{nullptr}, conv2{nullptr}, conv3{nullptr};
-    torch::nn::BatchNorm2d bn1{nullptr}, bn2{nullptr}, bn3{nullptr};
-    torch::nn::Sequential downsample{nullptr};
-    int stride;
 
-    Bottleneck(int inplanes, int planes, int stride = 1, torch::nn::Sequential downsample = nullptr)
-        : stride(stride), downsample(downsample) {
-        conv1 = register_module("conv1", torch::nn::Conv2d(torch::nn::Conv2dOptions(inplanes, planes, 1).bias(false)));
-        bn1 = register_module("bn1", torch::nn::BatchNorm2d(planes));
-        conv2 = register_module("conv2", torch::nn::Conv2d(torch::nn::Conv2dOptions(planes, planes, 3).stride(stride).padding(1).bias(false)));
-        bn2 = register_module("bn2", torch::nn::BatchNorm2d(planes));
-        conv3 = register_module("conv3", torch::nn::Conv2d(torch::nn::Conv2dOptions(planes, planes * expansion, 1).bias(false)));
-        bn3 = register_module("bn3", torch::nn::BatchNorm2d(planes * expansion));
+    Bottleneck(int64_t inplanes, int64_t planes, int64_t stride = 1, torch::nn::Sequential downsample = nullptr)
+        : conv1(torch::nn::Conv2d(torch::nn::Conv2dOptions(inplanes, planes, 1).bias(false))),
+          bn1(planes),
+          conv2(torch::nn::Conv2d(torch::nn::Conv2dOptions(planes, planes, 3).stride(stride).padding(1).bias(false))),
+          bn2(planes),
+          conv3(torch::nn::Conv2d(torch::nn::Conv2dOptions(planes, planes * 4, 1).bias(false))),
+          bn3(planes * 4),
+          relu(torch::nn::ReLU(torch::nn::ReLUOptions().inplace(true))),
+          downsample(downsample),
+          stride(stride) {
+        register_module("conv1", conv1);
+        register_module("bn1", bn1);
+        register_module("conv2", conv2);
+        register_module("bn2", bn2);
+        register_module("conv3", conv3);
+        register_module("bn3", bn3);
+        if (downsample) {
+            register_module("downsample", downsample);
+        }
     }
 
     torch::Tensor forward(torch::Tensor x) {
-        auto residual = x;
+        torch::Tensor residual = x;
 
-        auto out = conv1->forward(x);
+        torch::Tensor out = conv1->forward(x);
         out = bn1->forward(out);
-        out = torch::relu(out);
+        out = relu->forward(out);
 
         out = conv2->forward(out);
         out = bn2->forward(out);
-        out = torch::relu(out);
+        out = relu->forward(out);
 
         out = conv3->forward(out);
         out = bn3->forward(out);
@@ -38,23 +46,26 @@ struct Bottleneck : torch::nn::Module {
         }
 
         out += residual;
-        out = torch::relu(out);
+        out = relu->forward(out);
 
         return out;
     }
+
+private:
+    torch::nn::Conv2d conv1;
+    torch::nn::BatchNorm2d bn1;
+    torch::nn::Conv2d conv2;
+    torch::nn::BatchNorm2d bn2;
+    torch::nn::Conv2d conv3;
+    torch::nn::BatchNorm2d bn3;
+    torch::nn::ReLU relu;
+    torch::nn::Sequential downsample;
+    int64_t stride;
 };
 
-struct ResNet : torch::nn::Module {
-    int inplanes;
-    torch::nn::Conv2d conv1{nullptr};
-    torch::nn::BatchNorm2d bn1{nullptr};
-    torch::nn::ReLU relu{nullptr};
-    torch::nn::MaxPool2d maxpool{nullptr};
-    torch::nn::Sequential layer1{nullptr}, layer2{nullptr}, layer3{nullptr}, layer4{nullptr};
-    torch::nn::AvgPool2d avgpool{nullptr};
-    torch::nn::Linear fc_theta{nullptr}, fc_phi{nullptr}, fc_ec{nullptr};
-
-    ResNet(std::vector<int> layers) {
+class ResNet : public torch::nn::Module {
+public:
+    ResNet(const std::vector<int>& layers) {
         inplanes = 64;
         conv1 = register_module("conv1", torch::nn::Conv2d(torch::nn::Conv2dOptions(3, 64, 7).stride(2).padding(3).bias(false)));
         bn1 = register_module("bn1", torch::nn::BatchNorm2d(64));
@@ -68,27 +79,30 @@ struct ResNet : torch::nn::Module {
         fc_theta = register_module("fc_theta", torch::nn::Linear(512 * Bottleneck::expansion, 34));
         fc_phi = register_module("fc_phi", torch::nn::Linear(512 * Bottleneck::expansion, 34));
         fc_ec = register_module("fc_ec", torch::nn::Linear(512 * Bottleneck::expansion, 1));
+        
         init_param();
     }
 
     void init_param() {
-        for (auto& module : modules(/*include_self=*/false)) {
-            if (auto* conv = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
-                auto n = conv->options.kernel_size()->at(0) * conv->options.kernel_size()->at(1) * conv->options.out_channels();
-                conv->weight.data().normal_(0, std::sqrt(2.0 / n));
-            } else if (auto* bn = dynamic_cast<torch::nn::BatchNorm2dImpl*>(module.get())) {
-                bn->weight.data().fill_(1);
-                bn->bias.data().zero_();
-            } else if (auto* linear = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
-                auto n = linear->weight.size(0) * linear->weight.size(1);
-                linear->weight.data().normal_(0, std::sqrt(2.0 / n));
-                linear->bias.data().zero_();
+        for (auto& module : modules(false)) {
+            if (auto M = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
+                int64_t n = M->weight.size(1) * M->weight.size(2) * M->weight.size(3);
+                torch::nn::init::normal_(M->weight, 0, std::sqrt(2. / n));
+            } else if (auto M = dynamic_cast<torch::nn::BatchNorm2dImpl*>(module.get())) {
+                torch::nn::init::constant_(M->weight, 1);
+                torch::nn::init::constant_(M->bias, 0);
+            } else if (auto M = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
+                int64_t n = M->weight.size(0) * M->weight.size(1);
+                torch::nn::init::normal_(M->weight, 0, std::sqrt(2. / n));
+                torch::nn::init::constant_(M->bias, 0);
             }
         }
     }
 
-    torch::nn::Sequential _make_layer(int planes, int blocks, int stride = 1) {
+    torch::nn::Sequential _make_layer(int64_t planes, int64_t blocks, int64_t stride = 1) {
         torch::nn::Sequential downsample = nullptr;
+        torch::nn::Sequential layers;
+
         if (stride != 1 || inplanes != planes * Bottleneck::expansion) {
             downsample = torch::nn::Sequential(
                 torch::nn::Conv2d(torch::nn::Conv2dOptions(inplanes, planes * Bottleneck::expansion, 1).stride(stride).bias(false)),
@@ -96,7 +110,6 @@ struct ResNet : torch::nn::Module {
             );
         }
 
-        torch::nn::Sequential layers;
         layers->push_back(Bottleneck(inplanes, planes, stride, downsample));
         inplanes = planes * Bottleneck::expansion;
         for (int i = 1; i < blocks; ++i) {
@@ -105,7 +118,6 @@ struct ResNet : torch::nn::Module {
 
         return layers;
     }
-
     torch::Tensor forward(torch::Tensor x) {
         x = conv1->forward(x);
         x = bn1->forward(x);
@@ -123,6 +135,16 @@ struct ResNet : torch::nn::Module {
 
         return x;
     }
+
+private:
+    int64_t inplanes;
+    torch::nn::Conv2d conv1;
+    torch::nn::BatchNorm2d bn1;
+    torch::nn::ReLU relu;
+    torch::nn::MaxPool2d maxpool;
+    torch::nn::Sequential layer1, layer2, layer3, layer4;
+    torch::nn::AvgPool2d avgpool;
+    torch::nn::Linear fc_theta, fc_phi, fc_ec;
 };
 
 std::shared_ptr<ResNet> model_static(bool pretrained = false, bool USE_CUDA = false, const std::string& pretrained_path = "");
