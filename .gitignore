@@ -8,3 +8,4 @@ argparse/
 torchvision/
 vision-main/
 ffmpeg-7.0.2/
+build/

@@ -71,18 +71,18 @@ struct ResNet : torch::nn::Module {
         init_param();
     }
 
-    void init_param() {
-        for (auto& module : modules(/*include_self=*/false)) {
-            if (auto* conv = dynamic_cast<torch::nn::Conv2dImpl*>(module.get())) {
-                auto n = conv->options.kernel_size()->at(0) * conv->options.kernel_size()->at(1) * conv->options.out_channels();
-                conv->weight.data().normal_(0, std::sqrt(2.0 / n));
-            } else if (auto* bn = dynamic_cast<torch::nn::BatchNorm2dImpl*>(module.get())) {
-                bn->weight.data().fill_(1);
-                bn->bias.data().zero_();
-            } else if (auto* linear = dynamic_cast<torch::nn::LinearImpl*>(module.get())) {
-                auto n = linear->weight.size(0) * linear->weight.size(1);
-                linear->weight.data().normal_(0, std::sqrt(2.0 / n));
-                linear->bias.data().zero_();
+    void init_param(torch::nn::Module& module) {
+        for (auto& m : module.children()) {
+            if (auto conv = dynamic_cast<torch::nn::Conv2dImpl*>(m.get())) {
+                int64_t n = conv->weight.size(2) * conv->weight.size(3) * conv->weight.size(1);
+                conv->weight.normal_(0, std::sqrt(2.0 / n));
+            } else if (auto bn = dynamic_cast<torch::nn::BatchNorm2dImpl*>(m.get())) {
+                bn->weight.fill_(1);
+                bn->bias.zero_();
+            } else if (auto linear = dynamic_cast<torch::nn::LinearImpl*>(m.get())) {
+                int64_t n = linear->weight.size(0) * linear->weight.size(1);
+                linear->weight.normal_(0, std::sqrt(2.0 / n));
+                linear->bias.zero_();
             }
         }
     }
