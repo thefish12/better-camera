@@ -12,7 +12,7 @@ project(DemoUseTools)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -O3 -march=native")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -O3 -march=native")
 
 # set(Torch_DIR /root/better-camera/libtorch/share/cmake/Torch)
 # set(OpenCV_DIR /root/better-camera/opencv/opencv-4.x/cmake)

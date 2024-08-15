@@ -300,6 +300,6 @@ void run(const std::string &video_path, const std::string &model_weight, int jit
 int main(int argc, char **argv) {
     // program.parse_args(argc, argv);
     // run(args.get<std::string>("video"), args.get<std::string>("model_weight"), args.get<int>("jitter"), args.get<bool>("save_vis"), args.get<bool>("display_off"), args.get<bool>("save_text"), args.get<bool>("cuda"), args.get<bool>("ipex"), args.get<bool>("bf16"));
-    run("./videoplayback.avi","./data/model_weights.pth",0,false,true,false);
+    run("./videoplayback.avi","./data/model_weights.pkl",0,false,true,false);
     return 0;
 }
